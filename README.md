@@ -1,6 +1,3 @@
-Вот README.md для книги **"Modern JavaScript 2026"**, созданный по вашему запросу:
-
-```markdown
 # Modern JavaScript 2026
 
 ## Современный JavaScript в эпоху Web Platform, AI и Baseline
@@ -815,4 +812,4 @@ modern-javascript-2026/
 ## 🙏 Благодарности
 
 Особая благодарность сообществу TC39, разработчикам браузеров и всем, кто делает Web Platform лучше каждый день.
-```
+
