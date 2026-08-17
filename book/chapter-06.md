@@ -92,14 +92,14 @@ promise
 
 **Promise используется в современных API:**
 
-- Fetch API — `fetch()` возвращает Promise с Response.
-- Clipboard API — `navigator.clipboard.readText()` возвращает Promise.
-- File System API — `window.showDirectoryPicker()` возвращает Promise.
-- Web Locks — `navigator.locks.request()` возвращает Promise.
-- Web Bluetooth — `navigator.bluetooth.requestDevice()` возвращает Promise.
-- WebUSB — `navigator.usb.requestDevice()` возвращает Promise.
-- Navigation API — `navigation.navigate()` возвращает Promise.
-- Scheduler API — `scheduler.postTask()` возвращает Promise.
+- Fetch API — `fetch()` возвращает Promise с Response. Кросс-браузерный, Baseline Widely Available.
+- Clipboard API — `navigator.clipboard.readText()` возвращает Promise. Кросс-браузерный, Baseline.
+- Web Locks — `navigator.locks.request()` возвращает Promise. Кросс-браузерный, Baseline.
+- File System Access API — `window.showDirectoryPicker()` возвращает Promise. **Важная оговорка:** технология реализована только в Chromium-браузерах (Chrome, Edge, Opera); в Firefox и Safari отсутствует и не входит в Baseline. Стоит использовать с проверкой доступности и запасным сценарием на `<input type="file">`.
+- Web Bluetooth — `navigator.bluetooth.requestDevice()` возвращает Promise. Так же, как и File System Access API, поддерживается только в Chromium-браузерах и не имеет статуса Baseline.
+- WebUSB — `navigator.usb.requestDevice()` возвращает Promise. Аналогично, реализация ограничена Chromium.
+- Navigation API — `navigation.navigate()` возвращает Promise. На момент написания книги технология достигла статуса Baseline Newly Available (с января 2026 года), работает в Chrome, Edge, Firefox и Safari.
+- Scheduler API — `scheduler.postTask()` возвращает Promise. Как отмечалось в предыдущих главах, не входит в Baseline из-за отсутствия поддержки в Safari.
 
 **Современные методы композиции Promise:**
 
@@ -162,6 +162,7 @@ const promise = new Promise((resolve, reject) => {
 const { promise, resolve, reject } = Promise.withResolvers();
 // resolve и reject доступны в любой области видимости
 ```
+
 
 ---
 
@@ -487,18 +488,19 @@ controller.abort();
 
 Практически вся современная платформа использует единые принципы асинхронности. Именно через Promise и Async Iterators работают:
 
-- **Fetch API** — сетевые запросы.
-- **Streams API** — потоковая обработка данных.
-- **Navigation API** — управление навигацией.
-- **File System Access API** — работа с файловой системой.
-- **Clipboard API** — работа с буфером обмена.
-- **Web Bluetooth** — взаимодействие с Bluetooth-устройствами.
-- **WebUSB** — взаимодействие с USB-устройствами.
-- **Web Serial** — взаимодействие с последовательными портами.
-- **WebTransport** — низкоуровневая сетевая передача данных.
-- **AI API браузера** — взаимодействие с локальными AI-моделями.
+- **Fetch API** — сетевые запросы. Baseline Widely Available.
+- **Streams API** — потоковая обработка данных. Baseline Widely Available.
+- **Navigation API** — управление навигацией. Достигла Baseline Newly Available в январе 2026 года — на момент написания книги это одна из самых свежих технологий в списке, ставшая по-настоящему кросс-браузерной.
+- **File System Access API** — работа с файловой системой. **Ограничена Chromium-браузерами**, не входит в Baseline; в Firefox и Safari недоступна.
+- **Clipboard API** — работа с буфером обмена. Baseline.
+- **Web Bluetooth** — взаимодействие с Bluetooth-устройствами. **Ограничена Chromium-браузерами**, не входит в Baseline.
+- **WebUSB** — взаимодействие с USB-устройствами. **Ограничена Chromium-браузерами**, не входит в Baseline.
+- **Web Serial** — взаимодействие с последовательными портами. **Ограничена Chromium-браузерами** (десктопные версии Chrome, Edge, Opera), не входит в Baseline.
+- **WebTransport** — низкоуровневая сетевая передача данных. Долгое время оставалась Chromium-only технологией, но с выходом Safari 26.4 в марте 2026 года достигла статуса Baseline — это стоит отметить отдельно, поскольку ситуация изменилась совсем недавно.
+- **AI API браузера** — взаимодействие с локальными AI-моделями. Экспериментальная область, статус Baseline пока не определён; поддержка сильно различается между браузерами.
 
-Единство модели асинхронности делает знания универсальными — один и тот же подход применяется практически ко всем современным интерфейсам платформы. Если разработчик понимает Promise и async/await, он может работать с любым современным API без необходимости изучения уникальных паттернов асинхронности для каждого интерфейса.
+Единство модели асинхронности делает знания универсальными — один и тот же подход (Promise, async/await) применяется практически ко всем современным интерфейсам платформы, независимо от их фактического уровня кросс-браузерной зрелости. Однако важно не путать единство *модели программирования* с единством *доступности*: часть перечисленных API (File System Access, Web Bluetooth, WebUSB, Web Serial) остаются нишевыми технологиями с ограниченной браузерной поддержкой, тогда как другие (Fetch, Streams, Navigation API, теперь и WebTransport) уже полноценно кросс-браузерны. При выборе API для продакшена статус Baseline стоит проверять отдельно для каждой технологии, а не полагаться на факт использования Promise как индикатор готовности.
+
 
 ---
 
