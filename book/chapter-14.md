@@ -384,39 +384,66 @@ Streaming HTML широко используется современными с
 
 Сегодня Streams API используется значительно шире, чем только в Fetch API. Он лежит в основе множества современных технологий Web Platform:
 
-- **Fetch API** — потоковое чтение ответов через `response.body`.
+- **Fetch API** — потоковое чтение ответов через `response.body`. Baseline Widely Available.
 - **Compression Streams API** — сжатие и распаковка данных.
-- **WebTransport** — потоковая передача данных по сети.
-- **File System Access API** — потоковое чтение и запись файлов.
+- **WebTransport** — потоковая передача данных по сети. Долгое время эта технология оставалась Chromium-only (с поддержкой в Firefox с 2023 года), но достигла полноценного статуса Baseline только в марте 2026 года, когда поддержку добавил Safari 26.4 — это очень недавнее изменение, актуальное для книги, ориентированной на 2026 год.
+- **File System Access API** — потоковое чтение и запись файлов. Как отмечалось в предыдущих главах, остаётся Chromium-only технологией.
 - **Media API** — обработка аудио и видео потоков.
-- **WebCodecs** — кодирование и декодирование медиа.
+- **WebCodecs** — кодирование и декодирование медиа. Также прошёл путь от Chromium-only решения к кросс-браузерному: Firefox добавил полную поддержку на десктопе с версии 130 (2024), а Safari завершил переход только с версией 26 (сентябрь 2025) — до этого браузер поддерживал лишь видеочасть API, без работы со звуком. Стоит учитывать, что на Android поддержка WebCodecs в Firefox по-прежнему неполная.
 - **Обмен данными между Web Workers** — передача потоков между потоками выполнения.
 
+**Важное уточнение к примеру ниже:** в WebCodecs API нет встроенных классов `VideoDecoderStream` и `VideoEncoderStream` — платформа предоставляет только низкоуровневые `VideoDecoder` и `VideoEncoder`, работающие с колбэками, а не как готовые `TransformStream`. Обёртки со Streams-совместимым интерфейсом (как в примере ниже) нужно писать самостоятельно — это общепринятый паттерн в сообществе, но не часть спецификации:
+
 ```javascript
-// Пример объединения различных API через Streams
-async function processVideo(videoFile) {
+// Пример объединения различных API через Streams.
+// VideoDecoderStream и VideoEncoderStream — НЕ встроенные классы платформы,
+// а пользовательские обёртки над нативными VideoDecoder/VideoEncoder,
+// оформленные как TransformStream. Их нужно реализовать самостоятельно.
+
+class VideoDecoderStream extends TransformStream {
+  constructor(config) {
+    let decoder;
+    super({
+      start(controller) {
+        decoder = new VideoDecoder({
+          output: (frame) => controller.enqueue(frame),
+          error: (e) => controller.error(e)
+        });
+        decoder.configure(config);
+      },
+      transform(chunk) {
+        decoder.decode(chunk);
+      },
+      async flush() {
+        await decoder.flush();
+        decoder.close();
+      }
+    });
+  }
+}
+
+async function processVideo(videoFile, decoderConfig, encoderConfig) {
   // Чтение файла как потока
   const fileStream = await videoFile.stream();
-  
-  // Декодирование видео
-  const decodedStream = fileStream.pipeThrough(new VideoDecoderStream());
-  
+
+  // Декодирование видео через собственную обёртку
+  const decodedStream = fileStream.pipeThrough(new VideoDecoderStream(decoderConfig));
+
   // Обработка кадров
   const processedStream = decodedStream.pipeThrough(new TransformStream({
     transform(frame, controller) {
-      // Обработка кадра
       const processed = processFrame(frame);
       controller.enqueue(processed);
     }
   }));
-  
-  // Кодирование и запись в файл
-  const encodedStream = processedStream.pipeThrough(new VideoEncoderStream());
-  await encodedStream.pipeTo(writableStream);
+
+  // Кодирование и запись в файл потребует аналогичной обёртки VideoEncoderStream
+  await processedStream.pipeTo(writableStream);
 }
 ```
 
-Благодаря единой модели потоков разработчик может объединять различные API в общие конвейеры обработки без преобразования данных между несовместимыми форматами. Это делает код проще, быстрее и значительно экономичнее с точки зрения использования памяти.
+Благодаря единой модели потоков разработчик может объединять различные API в общие конвейеры обработки без преобразования данных между несовместимыми форматами. Это делает код проще, быстрее и значительно экономичнее с точки зрения использования памяти — при условии, что разработчик понимает, какие звенья конвейера предоставлены платформой напрямую, а какие приходится реализовывать самому.
+
 
 ---
 
