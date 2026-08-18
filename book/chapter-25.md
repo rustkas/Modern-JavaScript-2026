@@ -216,7 +216,9 @@ Change detection (только затронутые компоненты)
 
 ## 25.4. Zoneless стал стандартной моделью Angular
 
-`provideZonelessChangeDetection()` получил статус **stable в Angular 20.2**. Начиная с Angular 21, zoneless change detection включён по умолчанию.
+`provideZonelessChangeDetection()` получил статус **stable в Angular 20.2**. Начиная с **Angular 21 (вышел 20 ноября 2025 года)**, zoneless change detection включён по умолчанию для новых приложений.
+
+Показательный факт для оценки зрелости этого перехода: по данным команды Angular, уже в 2024 году больше половины новых Angular-приложений внутри Google использовали zoneless-стратегию, а к моменту релиза Angular 21 в открытом вебе (по данным HTTP Archive) было зафиксировано более 1400 публично доступных Angular-приложений на zoneless change detection. Это подтверждает, что переход к zoneless — не экспериментальная возможность «на будущее», а уже проверенная в масштабных production-условиях модель.
 
 Для нового приложения поэтому больше не требуется специально включать zoneless:
 
@@ -225,6 +227,7 @@ bootstrapApplication(AppComponent);
 ```
 
 Angular использует zoneless-поведение по умолчанию, если приложение не переопределяет его через `provideZoneChangeDetection`.
+
 
 **Angular запускает change detection в ответ на конкретные уведомления, включая:**
 
