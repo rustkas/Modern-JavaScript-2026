@@ -128,48 +128,63 @@ await server.connect(transport);
 
 Function Calling — это механизм, позволяющий языковым моделям вызывать внешние функции, описанные в JavaScript-коде. Модель получает список функций с их схемами и возвращает структурированный JSON, который указывает, какую функцию вызвать и с какими аргументами.
 
-**Пример Function Calling:**
+**Важное замечание о синтаксисе API.** Исходные параметры `functions` и `function_call`, с которых в 2023 году начиналась эта возможность у OpenAI, были официально признаны устаревшими ещё в декабре 2023 года (версия API `2023-12-01-preview`) и заменены на `tools` и `tool_choice`. Новый формат поддерживает параллельные вызовы нескольких функций за один ответ модели и расширяемый набор типов инструментов (не только пользовательские функции, но и, например, встроенный веб-поиск или MCP-серверы). Использовать устаревший синтаксис в новом коде в 2026 году не следует.
+
+**Актуальный пример Function Calling:**
 
 ```javascript
-// 1. Описание функций для модели
-const functions = [
+// 1. Описание функций для модели (актуальный формат tools)
+const tools = [
   {
-    name: 'get_current_weather',
-    description: 'Get the current weather in a location',
-    parameters: {
-      type: 'object',
-      properties: {
-        location: {
-          type: 'string',
-          description: 'City name'
-        }
-      },
-      required: ['location']
+    type: 'function',
+    function: {
+      name: 'get_current_weather',
+      description: 'Get the current weather in a location',
+      parameters: {
+        type: 'object',
+        properties: {
+          location: {
+            type: 'string',
+            description: 'City name'
+          }
+        },
+        required: ['location']
+      }
     }
   }
 ];
 
-// 2. Запрос к модели с функциями
+// 2. Запрос к модели с инструментами
 const response = await fetch('https://api.openai.com/v1/chat/completions', {
   method: 'POST',
   headers: { 'Authorization': `Bearer ${apiKey}` },
   body: JSON.stringify({
     model: 'gpt-4',
     messages: [{ role: 'user', content: 'What\'s the weather in London?' }],
-    functions: functions,
-    function_call: 'auto'
+    tools: tools,
+    tool_choice: 'auto'
   })
 });
 
 const data = await response.json();
-const functionCall = data.choices[0].message.function_call;
+const toolCalls = data.choices[0].message.tool_calls;
 
-// 3. Выполнение функции
-if (functionCall.name === 'get_current_weather') {
-  const args = JSON.parse(functionCall.arguments);
-  const weather = await getWeather(args.location);
-  
-  // 4. Возврат результата модели
+// 3. Выполнение функции (модель может запросить несколько параллельно)
+if (toolCalls) {
+  const toolResults = [];
+  for (const toolCall of toolCalls) {
+    if (toolCall.function.name === 'get_current_weather') {
+      const args = JSON.parse(toolCall.function.arguments);
+      const weather = await getWeather(args.location);
+      toolResults.push({
+        role: 'tool',
+        tool_call_id: toolCall.id,
+        content: JSON.stringify(weather)
+      });
+    }
+  }
+
+  // 4. Возврат результатов модели
   const secondResponse = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
     headers: { 'Authorization': `Bearer ${apiKey}` },
@@ -177,12 +192,15 @@ if (functionCall.name === 'get_current_weather') {
       model: 'gpt-4',
       messages: [
         { role: 'user', content: 'What\'s the weather in London?' },
-        { role: 'function', name: 'get_current_weather', content: JSON.stringify(weather) }
+        data.choices[0].message,
+        ...toolResults
       ]
     })
   });
 }
 ```
+
+Стоит также иметь в виду, что для новых проектов OpenAI рекомендует более современный **Responses API** (`POST /v1/responses`) как предпочтительный интерфейс, хотя Chat Completions API с параметрами `tools`/`tool_choice`, показанный выше, по-прежнему широко используется и поддерживается.
 
 **Ключевые возможности Function Calling:**
 
@@ -191,6 +209,7 @@ if (functionCall.name === 'get_current_weather') {
 - **Синергия с Browser APIs:** Агенты используют вызовы функций для взаимодействия с аппаратными уровнями платформы — например, для фиксации данных через `File System Access API` или управления системным буфером обмена через `Clipboard API`.
 
 - **Интеграция с Web Platform:** Функции могут вызывать любые браузерные API — Fetch, Storage, DOM-манипуляции, Web Workers.
+
 
 **Архитектурная схема Function Calling:**
 
